@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>World Meeting Card</title><style>*{box-sizing:border-box}body{background:#f2f0e9;color:#26343b;font:16px/1.55 'Segoe UI',sans-serif;margin:0}main{max-width:760px;background:white;margin:4vh auto;padding:clamp(18px,5vw,48px);border-top:6px solid #28605d}h1{font:700 clamp(32px,5vw,48px)/1.05 Georgia,serif;margin:0 0 16px}label{display:block;font-weight:600;margin:12px 0}small{display:block;font-weight:400}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}textarea,input,select{display:block;width:100%;font:inherit;padding:8px;margin-top:4px;border:1px solid #849897;border-radius:4px}input[type=color]{height:44px}button{padding:12px 18px;background:#205856;color:white;border:0;border-radius:5px;font:inherit;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}#paper{max-width:420px;margin:20px auto;border:1px solid #899695}#paper svg{display:block;width:100%}li{padding:4px}section{margin:20px 0}@media print{body,main{background:white;margin:0;padding:0;border:0}button,.grid,label,#go,main>p{display:none}}</style></head><body><main><h1>World Meeting Card</h1><p>Convert a single UTC meeting time into local dates and times for a team, including daylight-saving offsets.</p><div class="grid"><label>Meeting date (UTC)<input id="date" type="date"></label><label>Meeting time (UTC)<input id="time" type="time" value="15:00"></label></div><label>Time zones <small>One IANA zone per line.</small><textarea id="zones" rows="5">America/New_York
+Europe/London
+Asia/Tokyo</textarea></label><button id="go">Build meeting card</button><pre id="card" aria-live="polite"></pre><button id="save" hidden>Download meeting card</button></main><script>
+'use strict';
+const $=id=>document.getElementById(id);
+
+$('date').value=new Date().toISOString().slice(0,10);
+function build(){
+  $('save').hidden=true;
+  const instant=new Date($('date').value+'T'+$('time').value+'Z');
+  const zones=[...new Set($('zones').value.split('\n').map(s=>s.trim()).filter(Boolean))];
+  if(!Number.isFinite(+instant)||!zones.length){$('card').textContent='Enter a UTC date, a time and at least one zone.';return}
+  const lines=['Meeting · '+instant.toISOString().slice(0,16).replace('T',' ')+' UTC',''];
+  for(const zone of zones){try{
+    const fmt=new Intl.DateTimeFormat('en-GB',{timeZone:zone,weekday:'short',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'shortOffset'});
+    lines.push(zone+'  ·  '+fmt.format(instant));
+  }catch{$('card').textContent='Unknown time zone: '+zone;return}}
+  $('card').textContent=lines.join('\n');$('save').hidden=false;
+}
+$('go').onclick=build;document.addEventListener('input',()=>{$('save').hidden=true;$('card').textContent=''});$('save').onclick=()=>{
+  const href=URL.createObjectURL(new Blob([$('card').textContent],{type:'text/plain;charset=utf-8'}));const link=document.createElement('a');link.href=href;link.download='meeting-card.txt';link.click();setTimeout(()=>URL.revokeObjectURL(href),1000)
+};build();
+</script></body></html>
